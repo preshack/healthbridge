@@ -68,8 +68,7 @@ function parseMedlinePlusResponse(data: any): SymptomGuidance | null {
 
 export function formatTriageResponse(
   symptom: string,
-  guidance: SymptomGuidance,
-  language: string
+  guidance: SymptomGuidance
 ): string {
   // English formatting (primary)
   let msg = `🩺 *Health Guidance: ${symptom}*\n\n`;

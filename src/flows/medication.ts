@@ -1,10 +1,9 @@
 // src/flows/medication.ts
 // Prescription → RxNorm → openFDA interaction flow with Safety Score
-import { VisionResult, Session, Medication } from '../types/index.js';
+import { VisionResult, Session } from '../types/index.js';
 import { normalizeDrugName } from '../services/rxnorm.js';
 import { checkInteractions, getDrugInfo } from '../services/openfda.js';
 import { openrouterService } from '../services/openrouter.js';
-import { addToConversationHistory } from '../services/session.js';
 
 export async function handlePrescription(
   phone: string,
@@ -169,7 +168,7 @@ function calculateSafetyScore(interactions: Array<{ severity: string; deathCount
 }
 
 function formatSafetyScore(score: number, isSpanish: boolean): string {
-  let emoji: string, label: string, color: string;
+  let emoji: string, label: string;
 
   if (score >= 90) {
     emoji = '🟢';

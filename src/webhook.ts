@@ -1,25 +1,24 @@
-// src/webhook.ts — Production HealthBridge Webhook
+﻿// src/webhook.ts Ã¢â‚¬â€ Production HealthBridge Webhook
 // Dual-model: Gemma (vision/OCR) + K2 Think V2 (deep reasoning)
 import { sendMessage } from './services/whatsapp-baileys.js';
 import { openrouterService } from './services/openrouter.js';
-import { k2ThinkService } from './services/k2-think.js';
 import { getOrCreateSession, addToConversationHistory, resetFlow } from './services/session.js';
 import { checkRateLimit, sanitize } from './services/security.js';
 import { checkEmergency, getEmergencyResponse } from './flows/emergency.js';
-import { handlePrescription, handleDischarge, handleGenericDocument } from './flows/medication.js';
+import { handlePrescription, handleDischarge } from './flows/medication.js';
 import { startTriage, continueTriage } from './flows/triage.js';
-import { startProvider, continueProvider, handleSafeAccess, handleInsurance } from './flows/provider.js';
+import { startProvider, continueProvider, handleSafeAccess } from './flows/provider.js';
 import { handleReminderSetup, handleTaken } from './flows/reminder.js';
 import { processImage, processPDF, classifyDocument } from './services/vision.js';
 import { normalizeDrugName } from './services/rxnorm.js';
 import { checkInteractions, getDrugInfo } from './services/openfda.js';
-import { WELCOME, UPLOAD_TIP, PROCESSING_MSG, RATE_LIMIT_MSG } from './data/messages.js';
+import { WELCOME, RATE_LIMIT_MSG } from './data/messages.js';
 import { PILL_ID_PROMPT } from './prompts.js';
 import { Language, VisionResult } from './types/index.js';
 import sharp from 'sharp';
 import axios from 'axios';
 
-// ─── Fetch Full-Quality Image (bypasses WhatsApp compression) ────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Fetch Full-Quality Image (bypasses WhatsApp compression) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 async function fetchFullQualityImage(mediaId: string): Promise<{ base64: string, mimeType: string }> {
   const token = process.env.WHATSAPP_TOKEN;
   if (!token) throw new Error("Missing WHATSAPP_TOKEN in environment");
@@ -54,15 +53,15 @@ export async function handleWhatsApp(request: any, reply: any) {
     let mediaType: string = body.MediaType || '';
     const mediaId: string = body.MediaId || '';
 
-    // Meta Production Webhook — fetch full resolution image using media_id
+    // Meta Production Webhook Ã¢â‚¬â€ fetch full resolution image using media_id
     if (mediaId && !mediaBuffer) {
-      console.log(`   📸 Fetching full-quality original image from Meta for media_id: ${mediaId}`);
+      console.log(`   Ã°Å¸â€œÂ¸ Fetching full-quality original image from Meta for media_id: ${mediaId}`);
       try {
         const fullQuality = await fetchFullQualityImage(mediaId);
         mediaBuffer = Buffer.from(fullQuality.base64, 'base64');
         mediaType = fullQuality.mimeType;
       } catch (err: any) {
-        console.error("   ❌ Failed to fetch full-quality image:", err.message);
+        console.error("   Ã¢ÂÅ’ Failed to fetch full-quality image:", err.message);
       }
     }
 
@@ -72,40 +71,40 @@ export async function handleWhatsApp(request: any, reply: any) {
 
     // Rate limit
     if (!checkRateLimit(from)) {
-      await sendMessage(from, RATE_LIMIT_MSG.en || '⏳ Too many messages. Please wait.');
+      await sendMessage(from, RATE_LIMIT_MSG.en || 'Ã¢ÂÂ³ Too many messages. Please wait.');
       return reply.code(200).send({ status: 'rate_limited' });
     }
 
     const session = getOrCreateSession(from);
 
-    // ===== 1. EMERGENCY OVERRIDE — instant, no LLM =====
+    // ===== 1. EMERGENCY OVERRIDE Ã¢â‚¬â€ instant, no LLM =====
     const emergencyLang = checkEmergency(text);
     if (emergencyLang) {
       session.language = emergencyLang;
       await sendMessage(from, getEmergencyResponse(emergencyLang));
-      console.log(`   🚨 EMERGENCY [${emergencyLang}]`);
+      console.log(`   Ã°Å¸Å¡Â¨ EMERGENCY [${emergencyLang}]`);
       return reply.code(200).send({ status: 'emergency' });
     }
 
     // ===== 2. TAKEN acknowledgment =====
     const lowerTrim = text.toLowerCase().trim();
-    if (['taken', 'tomado', '已服', 'लिया', 'تم', 'đã uống', '복용완료', 'ininom'].includes(lowerTrim)) {
+    if (['taken', 'tomado', 'Ã¥Â·Â²Ã¦Å“Â', 'Ã Â¤Â²Ã Â¤Â¿Ã Â¤Â¯Ã Â¤Â¾', 'Ã˜ÂªÃ™â€¦', 'Ã„â€˜ÃƒÂ£ uÃ¡Â»â€˜ng', 'Ã«Â³ÂµÃ¬Å¡Â©Ã¬â„¢â€žÃ«Â£Å’', 'ininom'].includes(lowerTrim)) {
       const response = handleTaken(from, session);
       await sendMessage(from, response);
       return reply.code(200).send({ status: 'taken' });
     }
 
-    // ===== 3. MEDIA — Images, PDFs, Documents =====
+    // ===== 3. MEDIA Ã¢â‚¬â€ Images, PDFs, Documents =====
     if (mediaBuffer) {
-      return await handleMedia(from, text, mediaBuffer, mediaType, session, reply);
+      return await handleMedia(from, mediaBuffer, mediaType, session, reply);
     }
 
-    // Empty text, no media — skip
+    // Empty text, no media Ã¢â‚¬â€ skip
     if (!text.trim()) return reply.code(200).send({ status: 'empty' });
 
     // ===== 4. CONTINUE ACTIVE FLOW =====
     if (session.currentFlow !== 'idle') {
-      console.log(`   🔄 Flow: ${session.currentFlow} step ${session.triageStep}`);
+      console.log(`   Ã°Å¸â€â€ž Flow: ${session.currentFlow} step ${session.triageStep}`);
       switch (session.currentFlow) {
         case 'triage':
           await continueTriage(from, text, session, sendMessage);
@@ -126,7 +125,7 @@ export async function handleWhatsApp(request: any, reply: any) {
 
     // ===== 5. DETECT INTENT =====
     const intent = await openrouterService.detectIntent(text, session.language);
-    console.log(`   🧠 Intent: ${intent.intent} [${intent.detectedLanguage}] (${intent.confidence})`);
+    console.log(`   Ã°Å¸Â§Â  Intent: ${intent.intent} [${intent.detectedLanguage}] (${intent.confidence})`);
 
     // Update language from detection
     const validLangs: Language[] = ['en', 'es', 'zh', 'hi', 'ar', 'vi', 'ko', 'tl', 'pt'];
@@ -177,7 +176,7 @@ export async function handleWhatsApp(request: any, reply: any) {
         break;
 
       default:
-        // General AI conversation — K2 Think V2 handles with deep reasoning
+        // General AI conversation Ã¢â‚¬â€ K2 Think V2 handles with deep reasoning
         addToConversationHistory(session, 'user', text);
         const aiResp = await openrouterService.chat(text, session.language, session.conversationHistory);
         addToConversationHistory(session, 'assistant', aiResp);
@@ -187,7 +186,7 @@ export async function handleWhatsApp(request: any, reply: any) {
 
     return reply.code(200).send({ status: 'processed', intent: intent.intent });
   } catch (err: any) {
-    console.error('❌ Webhook error:', err.message || err);
+    console.error('Ã¢ÂÅ’ Webhook error:', err.message || err);
     return reply.code(500).send({ error: 'Internal server error' });
   }
 }
@@ -195,7 +194,6 @@ export async function handleWhatsApp(request: any, reply: any) {
 // --- MEDIA HANDLING ---
 async function handleMedia(
   from: string,
-  caption: string,
   buffer: Buffer,
   mimeType: string,
   session: any,
@@ -217,8 +215,13 @@ async function handleMedia(
     }
   }
 
-  // Image — could be prescription, pill, report, etc.
+  // Image Ã¢â‚¬â€ could be prescription, pill, report, etc.
   try {
+    const processingMsg = session.language === 'es'
+      ? 'Ã°Å¸â€Â Analizando tu imagen...'
+      : 'Ã°Å¸â€Â Analyzing your image...';
+    await sendMessage(from, processingMsg);
+
     const resized = await sharp(buffer)
       .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 80 })
@@ -226,38 +229,48 @@ async function handleMedia(
 
     const base64 = resized.toString('base64');
 
-    // Try pill identification first (unique feature)
-    const pillResult = await openrouterService.analyzeImage(base64, PILL_ID_PROMPT);
-    const pillJson = tryParseJSON(pillResult);
+    const [pillResultRaw, docVision] = await Promise.all([
+      withTimeout(
+        openrouterService.analyzeImage(base64, PILL_ID_PROMPT),
+        18000,
+        '{}'
+      ),
+      withTimeout<VisionResult>(
+        processImage(buffer, mimeType, session.language),
+        18000,
+        { text: '', confidence: 0, source: 'cloud_vision' }
+      ),
+    ]);
 
-    if (pillJson?.identified && pillJson.confidence > 0.6) {
-      // It's a pill/medication photo — use K2 for deep pill analysis
-      await handlePillIdentification(from, pillJson, base64, session);
+    const pillJson = normalizePillResult(tryParseJSON(pillResultRaw));
+    if (pillJson?.identified && pillJson.confidence >= 0.55) {
+      await handlePillIdentification(from, pillJson, session);
       return reply.code(200).send({ status: 'pill_identified' });
     }
 
-    // Try medical document analysis
-    vision = await processImage(buffer, mimeType, session.language);
-    const docType = vision.structured?.documentType || await classifyDocument(vision.text);
-    console.log(`   📄 Doc: ${docType} (confidence: ${vision.confidence})`);
+    vision = docVision;
+    const hasUsefulVision = isUsefulVisionResult(vision);
+    const docType = vision.structured?.documentType || await classifyDocument(vision.text || '');
+    console.log(`   [Media] Doc: ${docType} (confidence: ${vision.confidence})`);
 
-    if (vision.structured?.medications?.length) {
+    if (hasUsefulVision && vision.structured?.medications?.length) {
       await handlePrescription(from, vision, session, sendMessage);
-    } else if (docType === 'discharge') {
+    } else if (hasUsefulVision && docType === 'discharge') {
       await handleDischarge(from, vision, session, sendMessage);
-    } else if (vision.text) {
-      // Route through K2 Think V2 for warm, thorough document explanation
+    } else if (hasUsefulVision && vision.text) {
       const explanation = await openrouterService.explainDocument(vision.text, docType, session.language);
       await sendMessage(from, explanation);
     } else {
-      // Fallback message if vision completely failed
-      await sendMessage(from, "⚠️ I'm sorry, my vision system couldn't process this image clearly. Could you describe what it is, or take another photo?");
+      const retryMsg = session.language === 'es'
+        ? 'No pude leer bien esa foto. Intenta: 1) buena luz frontal, 2) acercarte a la etiqueta, 3) evitar movimiento, 4) enviar como Documento.'
+        : 'I could not read that photo clearly. Try: 1) bright front lighting, 2) closer label shot, 3) no motion blur, 4) send as Document.';
+      await sendMessage(from, retryMsg);
     }
   } catch (err) {
-    console.error('   ❌ Media processing error:', err);
+    console.error('   Ã¢ÂÅ’ Media processing error:', err);
     const errorMsg = session.language === 'es'
-      ? '❌ No pude procesar esa imagen. ¿Podrías enviarla de nuevo, preferiblemente como archivo (📎 → Documento)?'
-      : '❌ I couldn\'t process that image. Could you send it again, preferably as a file (📎 → Document)?';
+      ? 'Ã¢ÂÅ’ No pude procesar esa imagen. Ã‚Â¿PodrÃƒÂ­as enviarla de nuevo, preferiblemente como archivo (Ã°Å¸â€œÅ½ Ã¢â€ â€™ Documento)?'
+      : 'Ã¢ÂÅ’ I couldn\'t process that image. Could you send it again, preferably as a file (Ã°Å¸â€œÅ½ Ã¢â€ â€™ Document)?';
     await sendMessage(from, errorMsg);
   }
 
@@ -265,7 +278,7 @@ async function handleMedia(
 }
 
 // --- PILL IDENTIFICATION (K2 Think V2 Enhanced) ---
-async function handlePillIdentification(from: string, pill: any, imageBase64: string, session: any): Promise<void> {
+async function handlePillIdentification(from: string, pill: any, session: any): Promise<void> {
   const lang = session.language;
 
   // Prepare vision data summary for K2
@@ -305,53 +318,53 @@ async function handlePillIdentification(from: string, pill: any, imageBase64: st
   const k2Response = await openrouterService.analyzePillDeep(visionSummary, fdaContext, lang);
 
   if (k2Response) {
-    // K2 gave a thorough analysis — send it
+    // K2 gave a thorough analysis Ã¢â‚¬â€ send it
     await sendMessage(from, k2Response);
   } else {
     // Fallback to the structured pill ID response
-    await sendStructuredPillResponse(from, pill, fdaContext, session);
+    await sendStructuredPillResponse(from, pill, session);
   }
 }
 
 // Fallback structured pill response (when K2 is unavailable)
-async function sendStructuredPillResponse(from: string, pill: any, fdaContext: string, session: any): Promise<void> {
+async function sendStructuredPillResponse(from: string, pill: any, session: any): Promise<void> {
   const lang = session.language;
   let msg = '';
 
   if (lang === 'es') {
-    msg = `💊 *Medicamento Identificado*\n\n`;
+    msg = `Ã°Å¸â€™Å  *Medicamento Identificado*\n\n`;
     msg += `*Nombre:* ${pill.medicationName || 'No identificado'}\n`;
-    if (pill.genericName) msg += `*Genérico:* ${pill.genericName}\n`;
+    if (pill.genericName) msg += `*GenÃƒÂ©rico:* ${pill.genericName}\n`;
     if (pill.dosage) msg += `*Dosis:* ${pill.dosage}\n`;
     if (pill.manufacturer) msg += `*Fabricante:* ${pill.manufacturer}\n`;
-    msg += `\n*¿Para qué sirve?*\n${pill.purpose || 'No disponible'}\n`;
-    if (pill.usEquivalent) msg += `\n🇺🇸 *Equivalente en EE.UU.:* ${pill.usEquivalent}\n`;
-    msg += `\n*Instrucciones:*\n${pill.instructions || 'Consulte a su médico'}\n`;
+    msg += `\n*Ã‚Â¿Para quÃƒÂ© sirve?*\n${pill.purpose || 'No disponible'}\n`;
+    if (pill.usEquivalent) msg += `\nÃ°Å¸â€¡ÂºÃ°Å¸â€¡Â¸ *Equivalente en EE.UU.:* ${pill.usEquivalent}\n`;
+    msg += `\n*Instrucciones:*\n${pill.instructions || 'Consulte a su mÃƒÂ©dico'}\n`;
     if (pill.warnings?.length) {
-      msg += `\n⚠️ *Advertencias:*\n`;
-      pill.warnings.forEach((w: string) => { msg += `• ${w}\n`; });
+      msg += `\nÃ¢Å¡Â Ã¯Â¸Â *Advertencias:*\n`;
+      pill.warnings.forEach((w: string) => { msg += `Ã¢â‚¬Â¢ ${w}\n`; });
     }
-    msg += `\n💵 *Ahorra dinero:* Busca en GoodRx.com o CostPlusDrugs.com para comparar precios`;
-    msg += `\n📞 Un farmacéutico puede verificar esto GRATIS — solo entra y pregunta`;
+    msg += `\nÃ°Å¸â€™Âµ *Ahorra dinero:* Busca en GoodRx.com o CostPlusDrugs.com para comparar precios`;
+    msg += `\nÃ°Å¸â€œÅ¾ Un farmacÃƒÂ©utico puede verificar esto GRATIS Ã¢â‚¬â€ solo entra y pregunta`;
   } else {
-    msg = `💊 *Medication Identified*\n\n`;
+    msg = `Ã°Å¸â€™Å  *Medication Identified*\n\n`;
     msg += `*Name:* ${pill.medicationName || 'Unknown'}\n`;
     if (pill.genericName) msg += `*Generic:* ${pill.genericName}\n`;
     if (pill.dosage) msg += `*Dosage:* ${pill.dosage}\n`;
     if (pill.manufacturer) msg += `*Manufacturer:* ${pill.manufacturer}\n`;
     msg += `\n*What it's for:*\n${pill.purpose || 'Not available'}\n`;
-    if (pill.usEquivalent) msg += `\n🇺🇸 *US Equivalent:* ${pill.usEquivalent}\n`;
+    if (pill.usEquivalent) msg += `\nÃ°Å¸â€¡ÂºÃ°Å¸â€¡Â¸ *US Equivalent:* ${pill.usEquivalent}\n`;
     msg += `\n*How to take:*\n${pill.instructions || 'Consult your doctor'}\n`;
     if (pill.warnings?.length) {
-      msg += `\n⚠️ *Warnings:*\n`;
-      pill.warnings.forEach((w: string) => { msg += `• ${w}\n`; });
+      msg += `\nÃ¢Å¡Â Ã¯Â¸Â *Warnings:*\n`;
+      pill.warnings.forEach((w: string) => { msg += `Ã¢â‚¬Â¢ ${w}\n`; });
     }
-    msg += `\n💵 *Save money:* Check GoodRx.com or CostPlusDrugs.com to compare prices`;
-    msg += `\n📞 A pharmacist can verify this for FREE — just walk in and ask`;
+    msg += `\nÃ°Å¸â€™Âµ *Save money:* Check GoodRx.com or CostPlusDrugs.com to compare prices`;
+    msg += `\nÃ°Å¸â€œÅ¾ A pharmacist can verify this for FREE Ã¢â‚¬â€ just walk in and ask`;
   }
 
   msg += `\n\n_Confidence: ${Math.round((pill.confidence || 0) * 100)}%_`;
-  msg += `\n\n💬 Want to know more about this medication? Just ask!`;
+  msg += `\n\nÃ°Å¸â€™Â¬ Want to know more about this medication? Just ask!`;
 
   await sendMessage(from, msg);
 }
@@ -395,6 +408,43 @@ async function handleMedicationQuery(from: string, text: string, session: any): 
   await sendMessage(from, response);
 }
 
+function isUsefulVisionResult(vision: VisionResult): boolean {
+  if (!vision) return false;
+  if ((vision.structured?.medications?.length || 0) > 0) return true;
+  if (vision.structured?.documentType && vision.structured.documentType !== 'other') return true;
+  return (vision.text || '').trim().length >= 20 || vision.confidence >= 0.5;
+}
+
+function normalizePillResult(pill: any): any {
+  if (!pill || typeof pill !== 'object') return null;
+  const rawConfidence = Number(pill.confidence || 0);
+  const confidence = rawConfidence > 1 ? Math.min(1, rawConfidence / 10) : Math.max(0, rawConfidence);
+  const warnings = Array.isArray(pill.warnings)
+    ? pill.warnings
+    : pill.warnings
+      ? [String(pill.warnings)]
+      : [];
+
+  return {
+    ...pill,
+    identified: !!pill.identified || !!pill.medicationName,
+    confidence,
+    warnings,
+  };
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | null = null;
+  try {
+    const timeoutPromise = new Promise<T>((resolve) => {
+      timeoutHandle = setTimeout(() => resolve(fallback), timeoutMs);
+    });
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+}
+
 function tryParseJSON(str: string): any {
   try {
     const match = str.match(/\{[\s\S]*\}/);
@@ -402,3 +452,5 @@ function tryParseJSON(str: string): any {
     return null;
   } catch { return null; }
 }
+
+

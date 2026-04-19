@@ -151,8 +151,3 @@ export const RATE_LIMIT_MSG: Partial<Record<Language, string>> = {
   en: `⏳ You're sending messages really fast! Let me catch up. Try again in a minute.`,
   es: `⏳ ¡Estás enviando mensajes muy rápido! Déjame ponerme al día. Inténtalo de nuevo en un minuto.`,
 };
-
-export const NO_MEDS_FOUND: Partial<Record<Language, string>> = {
-  en: `🤔 I couldn't find any medication names in this document. Could you try:\n\n• Taking the photo in better lighting\n• Sending it as a *file* instead of photo (📎 → Document)\n• Typing the medication name if you know it`,
-  es: `🤔 No pude encontrar nombres de medicamentos en este documento. ¿Podrías intentar:\n\n• Tomar la foto con mejor iluminación\n• Enviarla como *archivo* en vez de foto (📎 → Documento)\n• Escribir el nombre del medicamento si lo conoces`,
-};

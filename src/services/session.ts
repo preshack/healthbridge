@@ -1,6 +1,6 @@
 // src/services/session.ts
 // In-memory session manager with 30-minute expiry
-import { Session, Language, FlowType } from '../types/index.js';
+import { Session } from '../types/index.js';
 import { hashPhone } from './security.js';
 
 const sessions = new Map<string, Session>();

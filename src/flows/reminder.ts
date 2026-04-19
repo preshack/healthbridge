@@ -24,30 +24,6 @@ const REMINDER_MSGS: Record<Language, (med: string) => string> = {
   pt: med => `⏰ Hora de tomar *${med}*. Responda *TOMADO* quando terminar.`,
 };
 
-const MISSED_MSGS: Record<Language, (med: string) => string> = {
-  en: med => `⚠️ Reminder: *${med}* dose may have been missed. Please take it now if you haven't.`,
-  es: med => `⚠️ Recordatorio: Es posible que se haya olvidado la dosis de *${med}*. Tómela ahora si no lo ha hecho.`,
-  zh: med => `⚠️ 提醒：可能漏服了 *${med}*。如果还没服用，请现在服用。`,
-  hi: med => `⚠️ अनुस्मारक: *${med}* की खुराक छूट गई हो सकती है।`,
-  ar: med => `⚠️ تذكير: ربما فاتتك جرعة *${med}*. تناولها الآن إن لم تفعل.`,
-  vi: med => `⚠️ Nhắc nhở: Có thể đã bỏ lỡ liều *${med}*. Hãy uống ngay nếu chưa uống.`,
-  ko: med => `⚠️ 알림: *${med}* 복용을 놓쳤을 수 있습니다. 아직 복용하지 않으셨다면 지금 복용해주세요.`,
-  tl: med => `⚠️ Paalala: Maaaring napalampas ang dosis ng *${med}*. Inumin na ngayon kung hindi pa.`,
-  pt: med => `⚠️ Lembrete: A dose de *${med}* pode ter sido esquecida. Tome agora se ainda não o fez.`,
-};
-
-const ALERT_MSGS: Record<Language, (med: string) => string> = {
-  en: med => `🚨 ALERT: *${med}* dose was missed. Please check on your family member.`,
-  es: med => `🚨 ALERTA: Se omitió la dosis de *${med}*. Por favor verifique con su familiar.`,
-  zh: med => `🚨 警报：*${med}* 剂量被遗漏。请检查您的家庭成员。`,
-  hi: med => `🚨 अलर्ट: *${med}* की खुराक छूट गई। कृपया अपने परिवार के सदस्य की जांच करें।`,
-  ar: med => `🚨 تنبيه: فاتت جرعة *${med}*. يرجى التحقق من فرد عائلتك.`,
-  vi: med => `🚨 CẢNH BÁO: Đã bỏ lỡ liều *${med}*. Hãy kiểm tra người thân của bạn.`,
-  ko: med => `🚨 경고: *${med}* 복용을 놓쳤습니다. 가족을 확인해주세요.`,
-  tl: med => `🚨 ALERTO: Napalampas ang dosis ng *${med}*. Pakisuri ang iyong miyembro ng pamilya.`,
-  pt: med => `🚨 ALERTA: A dose de *${med}* foi perdida. Verifique seu familiar.`,
-};
-
 export async function handleReminderSetup(
   phone: string,
   message: string,
@@ -143,3 +119,4 @@ export function handleTaken(
     ? `✅ ¡Registrado! Bien hecho por tomar su medicamento. 💪`
     : `✅ Logged! Great job taking your medication. 💪`;
 }
+

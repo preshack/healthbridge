@@ -1,6 +1,6 @@
 // src/flows/provider.ts
 // FQHC finder flow
-import { Session, Language } from '../types/index.js';
+import { Session } from '../types/index.js';
 import { findNearestFQHCs, formatProviderResults } from '../services/fqhc.js';
 import { RIGHTS_TEXT } from '../data/rights_text.js';
 
@@ -63,7 +63,7 @@ async function handleZipLookup(
 
 export async function handleSafeAccess(
   phone: string,
-  message: string,
+  _message: string,
   session: Session,
   sendFn: (to: string, msg: string) => Promise<void>
 ): Promise<void> {
@@ -80,7 +80,7 @@ export async function handleSafeAccess(
 
 export async function handleInsurance(
   phone: string,
-  message: string,
+  _message: string,
   session: Session,
   sendFn: (to: string, msg: string) => Promise<void>
 ): Promise<void> {

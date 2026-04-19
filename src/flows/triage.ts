@@ -1,10 +1,8 @@
 // src/flows/triage.ts
 // Conversational, multi-turn symptom assessment — asks one question at a time
-import { Session, Language } from '../types/index.js';
+import { Session } from '../types/index.js';
 import { getSymptomGuidance, formatTriageResponse } from '../services/medlineplus.js';
 import { openrouterService } from '../services/openrouter.js';
-import { normalizeDrugName } from '../services/rxnorm.js';
-import { getDrugInfo } from '../services/openfda.js';
 import { addToConversationHistory } from '../services/session.js';
 
 // Conversational triage questions (asked one at a time)
@@ -34,8 +32,6 @@ const QUESTIONS: Record<string, { en: string; es: string }> = {
     es: "Última pregunta — ¿tienes algún *otro síntoma* junto con esto? Incluso cosas que parezcan no relacionadas (fiebre, náuseas, mareos, etc.)?"
   }
 };
-
-const QUESTION_ORDER = ['onset', 'location', 'severity', 'history', 'medications', 'otherSymptoms'];
 
 export async function startTriage(
   phone: string,
@@ -170,7 +166,7 @@ Respond entirely in ${lang === 'es' ? 'Spanish' : 'English'}. Be warm and caring
     await sendFn(phone, response);
   } catch (err) {
     // Fallback to formatted MedlinePlus data
-    const fallback = formatTriageResponse(primarySymptom, guidance, session.language);
+    const fallback = formatTriageResponse(primarySymptom, guidance);
     await sendFn(phone, fallback);
   }
 
