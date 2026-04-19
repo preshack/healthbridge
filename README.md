@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://wa.me/19204895575">📱 Try on WhatsApp</a> •
-  <a href="https://health-bridge-saksham.vercel.app">🌐 Landing Page</a> •
+  <a href="https://health-bridge-theta.vercel.app">🌐 Landing Page</a> •
   <a href="#demo">🎥 Demo</a> •
   <a href="#architecture">🏗️ Architecture</a>
 </p>
